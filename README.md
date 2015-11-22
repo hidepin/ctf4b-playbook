@@ -1,7 +1,7 @@
 # ctf4b-playbook
 
 ## 概要
-セキュリティコンテストチャレンジブックのサンプルが動作する環境
+セキュリティコンテストチャレンジブックのサンプルが動作する環境。
 サンプルはすべて動作するが紹介されているツールがすべてインストールされているわけではない。
 
 ## 対応OS
@@ -33,6 +33,12 @@ git clone https://github.com/hidepin/ctf4b-playbook.git
 
 ``` sh
 cd ctf4b-playbook
-ansible-playbook -i production -k -D site.yml
+env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i production -k -D site.yml
 # (rootパスワードを入力)
+```
+
+5. 再起動する。
+
+``` sh
+reboot
 ```
