@@ -81,7 +81,7 @@
   when: ansible_os_family == "RedHat"
 
 - name: pip install
-  command: easy_install pip creates=/usr/bin/pip
+  command: easy_install pip creates=/opt/rh/python27/root/usr/bin/pip
   when: ansible_os_family == "RedHat"
 
 - name: pip
