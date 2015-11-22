@@ -1,0 +1,6 @@
+ansible_ssh_user: root
+sudo: no
+colon: ":"
+ctf4b_user:
+  # user/password="ctf4b/ctf4b123"
+  - { name: 'ctf4b', password: '$1$SomeSalt$pNOZNs8gX2x2oT1pf/GiZ/'}

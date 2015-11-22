@@ -1,0 +1,234 @@
+---
+# file: roles/ctf4b/main.yml
+- name: libselinux-python install
+  yum: name=libselinux-python state=present
+  when: ansible_os_family == "RedHat"
+
+- name: disable selinux
+  selinux: state=disabled
+  when: ansible_os_family == "RedHat"
+
+- name: enable i386 debuginfo
+  template: src=CentOS-Debuginfo-i386.repo.j2 dest=/etc/yum.repos.d/CentOS-Debuginfo-i386.repo owner=root group=root mode=0644
+  when: ansible_os_family == "RedHat"
+
+- name: packages install
+  yum: name={{item}} state=present enablerepo=base-debuginfo-i386
+  with_items:
+    - openssh-clients
+    - man
+    - man-pages
+    - man-pages-ja
+    - emacs-nox
+    - unzip
+    - binutils
+    - git
+    - strace
+    - ltrace
+    - gcc
+    - gdb
+    - glibc-devel.x86_64
+    - glibc-devel.i686
+    - glibc-debuginfo.i686
+    - libgcc.i686
+    - tcpdump
+    - wireshark
+    - centos-release-SCL
+    - libffi-devel
+    - openssl-devel
+    - nc
+    - httpd
+    - mod_php
+    - php-mysql
+    - mysql-server
+    - MySQL-python
+  notify:
+    - httpd restart
+  when: ansible_os_family == "RedHat"
+
+- name: ASLR settings
+  sysctl: name=kernel.randomize_va_space value=0
+
+- name: disable services
+  service: name={{item}} state=stopped enabled=no
+  with_items:
+    - iptables
+    - ip6tables
+
+- name: enable services
+  service: name={{item}} state=started enabled=yes
+  with_items:
+    - httpd
+    - mysqld
+
+- name: Add ctf4b user
+  user:
+    name="{{item.name}}"
+    password="{{item.password}}"
+    comment="{{item.name}}"
+  with_items: ctf4b_user
+
+- name: python install
+  yum: name={{item}} state=present
+  with_items:
+    - python27-python
+    - python27-python-setuptools
+    - python27-python-devel
+  when: ansible_os_family == "RedHat"
+
+- name: enable python27
+  template: src=enablepython27.sh.j2 dest=/etc/profile.d/enablepython27.sh owner=root group=root mode=0644
+  when: ansible_os_family == "RedHat"
+
+- name: pip install
+  command: easy_install pip creates=/usr/bin/pip
+  when: ansible_os_family == "RedHat"
+
+- name: pip
+  pip: name={{item}} state=latest
+  with_items:
+    - six
+    - pyopenssl
+    - ndg-httpsclient
+    - pyasn1
+    - scapy
+  when: ansible_os_family == "RedHat"
+
+- name: check peda
+  stat: path=/home/{{ctf4b_user[0].name}}/peda
+  register: peda_st
+
+- name: install peda
+  shell: git clone https://github.com/longld/peda.git /home/{{ctf4b_user[0].name}}/peda && echo "source /home/{{ctf4b_user[0].name}}/peda/peda.py" >> /home/{{ctf4b_user[0].name}}/.gdbinit
+  register: users_table_st
+  when: peda_st.stat.exists == false
+
+- name: chown ctf4b peda
+  file:
+    path="/home/{{ctf4b_user[0].name}}/peda"
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+    recurse=yes
+
+- name: chown ctf4b .gdbinit
+  file:
+    path="/home/{{ctf4b_user[0].name}}/.gdbinit"
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+
+- name: create org ex dir
+  file:
+    path=/home/{{ctf4b_user[0].name}}/org/
+    state=directory
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+
+- name: check pwn ex
+  stat: path=/home/{{ctf4b_user[0].name}}/book4b_pwn
+  register: pwn_ex_st
+
+- name: get ctf4b pwn ex
+  get_url:
+    url="https://book.mynavi.jp/files/user/support/9784839956486/book4b_pwn.zip"
+    dest="/home/{{ctf4b_user[0].name}}/org/"
+    force=yes
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+  when: pwn_ex_st.stat.exists == false
+
+- name: extract pwn ex
+  unarchive:
+    src="/home/{{ctf4b_user[0].name}}/org/book4b_pwn.zip"
+    dest="/home/{{ctf4b_user[0].name}}"
+    copy=no
+  when: pwn_ex_st.stat.exists == false
+
+- name: chown ctf4b pwn ex
+  file:
+    path="/home/{{ctf4b_user[0].name}}/book4b_pwn"
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+    recurse=yes
+
+- name: check net ex
+  stat: path=/home/{{ctf4b_user[0].name}}/book4b_net
+  register: net_ex_st
+
+- name: get ctf4b net ex
+  get_url:
+    url="https://book.mynavi.jp/files/user/support/9784839956486/book4b_net.zip"
+    dest="/home/{{ctf4b_user[0].name}}/org/"
+    force=yes
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+  when: net_ex_st.stat.exists == false
+
+- name: extract net ex
+  unarchive:
+    src="/home/{{ctf4b_user[0].name}}/org/book4b_net.zip"
+    dest="/home/{{ctf4b_user[0].name}}"
+    copy=no
+  when: net_ex_st.stat.exists == false
+
+- name: chown ctf4b net ex
+  file:
+    path="/home/{{ctf4b_user[0].name}}/book4b_net"
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+    recurse=yes
+
+- name: check web ex
+  stat: path=/var/www/html/book4b
+  register: web_ex_st
+
+- name: get ctf4b web ex
+  get_url:
+    url="https://book.mynavi.jp/files/user/support/9784839956486/book4b_web.zip"
+    dest="/home/{{ctf4b_user[0].name}}/org/"
+    force=yes
+    owner={{ctf4b_user[0].name}}
+    group={{ctf4b_user[0].name}}
+  when: web_ex_st.stat.exists == false
+
+- name: extract web ex
+  unarchive:
+    src="/home/{{ctf4b_user[0].name}}/org/book4b_web.zip"
+    dest="/var/www/html"
+    copy=no
+  when: web_ex_st.stat.exists == false
+  notify:
+    - httpd restart
+
+- name: chown ctf4b web ex
+  file:
+    path="/var/www/html/book4b"
+    owner=apache
+    group=apache
+    recurse=yes
+
+- name: enable php short_open_tag
+  template: src=php.ini.j2 dest=/etc/php.ini owner=root group=root mode=0644
+  notify:
+    - httpd restart
+  when: ansible_os_family == "RedHat"
+
+- name: change db user
+  mysql_user: name=root password=password
+
+- name: set db password for root
+  template: src=my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+
+- name: set db password for apache
+  template: src=my.cnf.j2 dest=/var/www/.my.cnf owner=apache group=apache mode=0600
+
+- name: create mysql db
+  mysql_db: name=book4b state=present encoding=utf8 login_user="root" login_password="password"
+
+- name: check users table
+  command: mysql book4b -N -e"show tables"
+  register: users_table_st
+  changed_when: users_table_st.stdout not in ['users']
+
+- name: import mysql users table
+  mysql_db: name=book4b state=import target=/var/www/html/book4b/table_mysql.sql
+  when: users_table_st.stdout not in ['users']
