@@ -6,11 +6,14 @@
 
 ## 対応OS
 - CentOS6 (pedaがpython関連のため動作しない)
+- Ubuntu15.10
 
 ## ユーザ
 - ctf4b (password: ctf4b123)
 
 ## 設定手順
+
+### CentOS6
 0. CentOS6をminimalでインストールする。
 
 1. ログインしrootになる。
@@ -33,8 +36,42 @@ git clone https://github.com/hidepin/ctf4b-playbook.git
 
 ``` sh
 cd ctf4b-playbook
-env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i production -k -D site.yml
+env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i production -u root -k -D site.yml
 # (rootパスワードを入力)
+```
+
+5. 再起動する。
+
+``` sh
+reboot
+```
+
+### Ubuntu 15.10
+0. Ubuntu15.10をserverでインストールする。
+   (opensshだけインストール時に有効化する)
+
+1. 作成したユーザでログインする。
+
+2. ansibleをインストールする。
+
+``` sh
+sudo apt install -y ansible sshpass
+```
+
+3. gitをインストールしてplaybookを入手する
+
+``` sh
+sudo apt install -y git
+git clone https://github.com/hidepin/ctf4b-playbook.git
+```
+
+4. playbookを実行する
+
+``` sh
+cd ctf4b-playbook
+env ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i production -u (ubutuユーザ) -s -k -K -D site.yml
+# (ubuntuユーザパスワードを入力)
+# (ubuntuユーザパスワードを入力)
 ```
 
 5. 再起動する。

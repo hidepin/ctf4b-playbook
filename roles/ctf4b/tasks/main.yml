@@ -12,7 +12,7 @@
   template: src=CentOS-Debuginfo-i386.repo.j2 dest=/etc/yum.repos.d/CentOS-Debuginfo-i386.repo owner=root group=root mode=0644
   when: ansible_os_family == "RedHat"
 
-- name: packages install
+- name: redhat packages install
   yum: name={{item}} state=present enablerepo=base-debuginfo-i386
   with_items:
     - openssh-clients
@@ -46,26 +46,47 @@
     - httpd restart
   when: ansible_os_family == "RedHat"
 
+- name: debian packages install
+  apt: name={{item}} state=present
+  with_items:
+    - unzip
+    - apache2
+    - libapache2-mod-php5
+    - mysql-server
+    - python-mysqldb
+    - python-scapy
+  notify:
+    - apache2 restart
+  when: ansible_os_family == "Debian"
+
 - name: ASLR settings
   sysctl: name=kernel.randomize_va_space value=0
 
-- name: disable services
+- name: disable services for redhat
   service: name={{item}} state=stopped enabled=no
   with_items:
     - iptables
     - ip6tables
+  when: ansible_os_family == "RedHat"
+
+- name: disable services for debian
+  service: name={{item}} state=stopped enabled=no
+  with_items:
+    - iptables
+  when: ansible_os_family == "Debian"
 
 - name: enable services
   service: name={{item}} state=started enabled=yes
   with_items:
-    - httpd
-    - mysqld
+    - apache2
+    - mysql
 
 - name: Add ctf4b user
   user:
     name="{{item.name}}"
     password="{{item.password}}"
     comment="{{item.name}}"
+    shell=/bin/bash
   with_items: ctf4b_user
 
 - name: python install
@@ -196,15 +217,26 @@
     dest="/var/www/html"
     copy=no
   when: web_ex_st.stat.exists == false
-  notify:
-    - httpd restart
 
-- name: chown ctf4b web ex
+- name: chown ctf4b web ex for redhat
   file:
     path="/var/www/html/book4b"
     owner=apache
     group=apache
     recurse=yes
+  notify:
+    - httpd restart
+  when: ansible_os_family == "RedHat"
+
+- name: chown ctf4b web ex for debian
+  file:
+    path="/var/www/html/book4b"
+    owner=www-data
+    group=www-data
+    recurse=yes
+  notify:
+    - apache2 restart
+  when: ansible_os_family == "Debian"
 
 - name: enable php short_open_tag
   template: src=php.ini.j2 dest=/etc/php.ini owner=root group=root mode=0644
@@ -218,8 +250,13 @@
 - name: set db password for root
   template: src=my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
 
-- name: set db password for apache
+- name: set db password for redhat apache
   template: src=my.cnf.j2 dest=/var/www/.my.cnf owner=apache group=apache mode=0600
+  when: ansible_os_family == "RedHat"
+
+- name: set db password for debian apache
+  template: src=my.cnf.j2 dest=/var/www/.my.cnf owner=www-data group=www-data mode=0600
+  when: ansible_os_family == "Debian"
 
 - name: create mysql db
   mysql_db: name=book4b state=present encoding=utf8 login_user="root" login_password="password"
